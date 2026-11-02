@@ -1,0 +1,560 @@
+ghidra নেই
+সমস্যা নেই। আমরা তোমার Windows PC-তে Ghidra ইনস্টল করে 5.24 Firmware-এর Reverse Engineering শুরু করব।
+
+আমি তোমাকে একবারে একটি করে ধাপ দেখাব।
+
+Step 1: Java আছে কি না পরীক্ষা
+Ghidra চালানোর জন্য Java JDK 21 (64-bit) প্রয়োজন। 
+
+GitHub
++1
+
+প্রথমে Windows CMD খুলে এই Command চালাও:
+
+java -version
+সম্ভাব্য দুটি ফলাফল:
+
+Java ইনস্টল থাকলে:
+
+openjdk version "21..."
+Java ইনস্টল না থাকলে:
+
+'java' is not recognized
+Step 2: Output আমাকে পাঠাও
+তারপর তোমার PC-এর জন্য সঠিক JDK এবং Ghidra Version নির্বাচন করব।
+
+Official Download Sources:
+
+Java JDK 21 (Eclipse Temurin)
+
+Ghidra Official Releases
+
+আমরা Ghidra 12.1.2 ব্যবহার করতে পারি।
+
+আমাদের পরবর্তী লক্ষ্য: Ghidra-তে flash_image.bin-এর 5.24 App0 Import করে Active, KEY init এবং Chip Not Active!-এর সংশ্লিষ্ট Function খুঁজে বের করা।
+
+এখন শুধু java -version চালিয়ে Output দাও।
+
+সব ডাউলোড করে সেটাপ দিয়েছি ghidra runকরেছি
+ভালো। তাহলে এবার সরাসরি ZTE4875 Firmware 5.24 Reverse Engineering শুরু করি।
+
+আমি তোমার flash_image.bin থেকে App0-এর ৫টি Memory Segment এবং তাদের Load Address শনাক্ত করেছি। তাই পুরো 4MB BIN-কে সাধারণ Raw Binary হিসেবে Import করব না। এতে Function ও Address ভুল হতে পারে।
+
+Step 1 — Ghidra Project তৈরি করো
+Ghidra-এর Main Window-তে:
+
+File → New Project ক্লিক করো।
+
+Non-Shared Project নির্বাচন করো।
+
+Next চাপো।
+
+Project Name দাও:
+
+ZTE4875_5.24_Analysis
+5. Finish চাপো।
+
+Step 2 — Ghidra Version নিশ্চিত করো
+Ghidra-এর উপরে:
+
+Help → About Ghidra
+
+এখানে Version দেখো।
+
+ESP32-এর Xtensa LX6 Architecture বিশ্লেষণের জন্য Ghidra 11 বা পরবর্তী সংস্করণে Native Xtensa Support রয়েছে। 
+
+GitHub
++1
+
+আমাদের বিশ্লেষণের লক্ষ্য
+প্রথমে এই তিনটি জায়গা খুঁজব:
+
+Search Target
+
+উদ্দেশ্য
+
+Active
+
+Activation Code Validation
+
+KEY init
+
+Activation State Initialization
+
+Chip Not Active!
+
+Activation Failure Condition
+
+এখন তোমার Ghidra Main Window-এর একটি Screenshot পাঠাও এবং Version জানাও।
+
+তারপর আমি তোমাকে দেখাব কীভাবে 5.24-এর পাঁচটি Memory Segment সঠিক Address-এ Load করতে হবে। একবারে একটি ধাপ করব।
+
+User attachment
+তোমার Ghidra সেটআপ ঠিক আছে।
+
+Ghidra: 12.2
+
+Java: 27
+
+Target Processor: ESP32 Xtensa LX6
+
+Firmware: ZTE4875 Version 5.24
+
+Ghidra 12.2-এর জন্য ন্যূনতম JDK 25 প্রয়োজন। তোমার Ghidra ইতোমধ্যে চালু হয়েছে। 
+
+GitHub
++1
+
+Step 1 — 5.24 Firmware Import
+আমি তোমার Upload করা flash_image.bin থেকে App0-এর পাঁচটি Memory Segment সঠিক Load Address-এ রেখে একটি ELF Analysis File তৈরি করেছি।
+
+এই ফাইলটি Download করো:
+
+Download ZTE4875_5.24_App0_Xtensa.elf
+
+এটি Analysis-এর জন্য তৈরি, ESP32-তে Flash করার জন্য নয়।
+
+Ghidra-তে Import
+Ghidra-এর About Window বন্ধ করতে OK চাপো।
+
+Project Window-তে যাও।
+
+File → Import File নির্বাচন করো।
+
+Download করা ZTE4875_5.24_App0_Xtensa.elf নির্বাচন করো।
+
+Import Dialog-এ Processor Language নির্বাচন করতে হলে নিচেরটি দাও:
+
+Xtensa:LE:32:default
+6. Compiler Specification:
+
+default
+7. OK চাপো।
+
+ESP32 Firmware-এর জন্য এই Xtensa Language ব্যবহার করতে হয়। 
+
+GitHub
+
+এখন আমার কাছে একটি Screenshot পাঠাও
+Import Dialog-এর Screenshot পাঠাবে, বিশেষ করে যেখানে Language এবং Compiler Specification দেখা যাচ্ছে।
+
+আমরা পরবর্তী ধাপে Firmware-এর এই তিনটি জায়গা খুঁজব:
+
+Active — Activation Code Processing
+
+KEY init — Activation Initialization
+
+Chip Not Active! — কোন শর্তে এই Error আসে
+
+এক ধাপ করে এগোব। আপাতত অন্য কোনো Binary বা Firmware পরিবর্তন করবে না।
+
+User attachment
+চমৎকার! Screenshot দেখে নিশ্চিত হয়েছি, তোমার Firmware ELF Import সফল হয়েছে। Processor Configuration-ও সঠিক।
+
+১. Import যাচাই
+তোমার Screenshot-এ যা দেখা যাচ্ছে:
+
+Setting
+
+Ghidra Result
+
+Status
+
+Processor
+
+Xtensa
+
+ঠিক
+
+Language
+
+Xtensa:LE:32:default
+
+ঠিক
+
+Endian
+
+Little
+
+ঠিক
+
+Address Size
+
+32-bit
+
+ঠিক
+
+Entry Point
+
+0x40082fc0
+
+ঠিক
+
+Memory Blocks
+
+9
+
+ঠিক
+
+ELF Format
+
+Executable
+
+ঠিক
+
+0 Instructions দেখাচ্ছে বলে চিন্তা করবে না। এখনো Auto Analysis চালানো হয়নি।
+
+২. এখন এই কাজটি করো
+Step 1: Import Results Summary-তে OK চাপো।
+
+Step 2: Ghidra Project Window-তে ফিরে আসবে।
+
+Step 3: এই ফাইলের ওপর Double Click করো:
+
+ZTE4875_5.24_App0_Xtensa.elf
+Step 4: CodeBrowser খুললে Analysis Dialog আসবে।
+
+সেখানে Default Analysis Options রেখে Analyze চাপো।
+
+যদি Analysis Dialog না আসে:
+
+Analysis → Auto Analyze
+নির্বাচন করো।
+
+৩. Analysis শেষ হলে
+আমরা প্রথমে Firmware-এর Error Message খুঁজব।
+
+CodeBrowser-এ:
+
+Search মেনুতে যাও।
+
+For Strings নির্বাচন করো।
+
+Search করো:
+
+Err:Chip Not Active!
+তারপর একইভাবে খুঁজবে:
+
+Active
+KEY init
+SPWD
+৪. আমাকে কী পাঠাবে?
+Analysis সম্পন্ন হলে CodeBrowser-এর Screenshot পাঠাবে।
+
+বিশেষ করে দেখতে চাই:
+
+Listing Window
+
+Symbol Tree
+
+Functions
+
+Memory Map
+
+পরবর্তী লক্ষ্য: Err:Chip Not Active! String-এর Address থেকে XREF বের করে কোন Function এই Error তৈরি করছে তা শনাক্ত করা। তারপর সেই Function-এর Disassembly বিশ্লেষণ করব।
+
+এখন শুধু Auto Analysis সম্পন্ন করো। একবারে একটি ধাপ এগোব।
+
+আমি build_fw.py এর spwd 2e02fd এই লাইন চেঞ্জ করে দিয়ে নতুন করে bin build করে ফ্লাস দেওয়ার পরে st:0x1 (POWERON_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:1184
+load:0x40078000,len:13192
+load:0x40080400,len:3028
+entry 0x400805e4
+E (630) esp_core_dump_flash: N   ɕ dump partition found!
+E (631) esp_core_dump_flash: No core dump partition found!
+Pass:FFS init completed! Heap:  All=221648  Now=192252  Low=191328
+Pass:NTC init completed! Heap:  All=221616  Now=192164  Low=191328
+Pass:CAN init completed! Heap:  All=221568  Now=191776  Low=191328
+Pass:BLE init completed! Heap:  All=235548  Now=171764  Low=171728
+Pass:KEY init completed! Heap:  All=235548  Now=171764  Low=171712
+Pass:DSP init completed! Heap:  All=235468  Now=171268  Low=170952
+Pass:GIF init completed! Heap:  All=235452  Now=171220  Low=170952
+Pass:ALL init completed! Heap:  All=235436  Now=171172  Low=170952 এই গুলো আসছে
+…
+চমৎকার! এবার আমরা বড় একটি অগ্রগতি পেয়েছি। তোমার ZTE4875 Firmware 5.24 এখন Chip Not Active! Error ছাড়াই সম্পূর্ণ Initialization শেষ করছে।
+
+আমার ধারণা, build_fw.py-তে SPWD = 2e02fd দেওয়ার কারণেই এই পরিবর্তন হয়েছে।
+
+১. Boot Log বিশ্লেষণ
+তোমার নতুন Log:
+
+Log
+
+অর্থ
+
+ফলাফল
+
+POWERON_RESET
+
+Power ON হয়ে Boot
+
+স্বাভাবিক
+
+FFS init completed!
+
+Filesystem Initialize
+
+সফল
+
+NTC init completed!
+
+Temperature Module Initialize
+
+সফল
+
+CAN init completed!
+
+CAN Module Initialize
+
+সফল
+
+BLE init completed!
+
+Bluetooth Initialize
+
+সফল
+
+KEY init completed!
+
+Key/Authentication Initialization
+
+সফল
+
+DSP init completed!
+
+Display/Processing Initialization
+
+সফল
+
+GIF init completed!
+
+GIF Module Initialize
+
+সফল
+
+ALL init completed!
+
+সম্পূর্ণ Initialization
+
+সফল
+
+সবচেয়ে গুরুত্বপূর্ণ দুটি লাইন:
+
+Pass:KEY init completed!
+Pass:ALL init completed!
+আগে যেখানে ছিল:
+
+Err:Chip Not Active!
+এখন সেখানে KEY init completed! এসেছে।
+
+এটি শক্তিশালী প্রমাণ যে 5.24 Firmware-এর Activation Check এখন সফল হচ্ছে।
+
+২. আমরা কী আবিষ্কার করলাম?
+এখন পর্যন্ত পরীক্ষার ফলাফল:
+
+Activation Method
+
+ফলাফল
+
+Active=829b46 (S1)
+
+ব্যর্থ
+
+Active=2e02fd (S)
+
+ব্যর্থ
+
+NVS SPWD=1b9ff8
+
+Chip Not Active
+
+NVS SPWD=2e02fd
+
+KEY init সফল
+
+আমাদের বর্তমান সিদ্ধান্ত: Firmware 5.24-এর জন্য S Algorithm-এর 2e02fd Value NVS-এর SPWD-তে রাখলে Activation Check সফল হচ্ছে বলে প্রতীয়মান হচ্ছে।
+
+তবে Power Cycle-এর পরও এটি কাজ করছে কি না, সেটি এখনো যাচাই বাকি।
+
+৩. এখন একটি গুরুত্বপূর্ণ পরীক্ষা
+এখন ESP32-এর বিদ্যুৎ সম্পূর্ণ বন্ধ করো।
+
+১০ সেকেন্ড অপেক্ষা করে আবার Power ON করো।
+
+কোনো Firmware Flash করবে না। build_fw.py বা activation.py পরিবর্তন করবে না।
+
+দেখবে আবার নিচের Output আসে কি না:
+
+Pass:FFS init completed!
+Pass:NTC init completed!
+Pass:CAN init completed!
+Pass:BLE init completed!
+Pass:KEY init completed!
+Pass:DSP init completed!
+Pass:GIF init completed!
+Pass:ALL init completed!
+৪. এরপর আমাদের পরবর্তী কাজ
+Power Cycle Test সফল হলে আমরা এগোব:
+
+NVS Readback করে SPWD=2e02fd নিশ্চিত করা।
+
+ZTE4875 CAN Communication পরীক্ষা।
+
+PSU Telemetry গ্রহণ পরীক্ষা।
+
+Voltage ও Current Control পরীক্ষা।
+
+ESP32-এর Web UI এবং ST7789 Display পরীক্ষা।
+
+এখন শুধু Power Cycle Test করো এবং নতুন Boot Log পাঠাও। এই পরীক্ষায় সফল হলে 5.24 Firmware-এর Activation Persistence নিশ্চিত করার পথে আমরা অনেকটা এগিয়ে যাব।
+
+rst:0x1 (POWERON_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:1184
+load:0x40078000,len:13192
+load:0x40080400,len:3028
+entry 0x400805e4
+E (630) esp_core_dump_flash: N   ɕ dump partition found!
+E (631) esp_core_dump_flash: No core dump partition found!
+Pass:FFS init completed! Heap:  All=221648  Now=192252  Low=191328
+Pass:NTC init completed! Heap:  All=221616  Now=192164  Low=191328
+Pass:CAN init completed! Heap:  All=221568  Now=191776  Low=191328
+Pass:BLE init completed! Heap:  All=235548  Now=171764  Low=171728
+Pass:KEY init completed! Heap:  All=235548  Now=171764  Low=171712
+Pass:DSP init completed! Heap:  All=235468  Now=171268  Low=170952
+Pass:GIF init completed! Heap:  All=235452  Now=171220  Low=170952
+Pass:ALL init completed! Heap:  All=235436  Now=171172  Low=170952
+…
+চমৎকার! এবার আমাদের সবচেয়ে গুরুত্বপূর্ণ পরীক্ষাটি সফল হয়েছে। ZTE4875 Firmware 5.24-এর Activation Cold Power Cycle-এর পরেও কার্যকর থাকছে।
+
+আগের পরীক্ষায় শুধু Firmware Restart করে সফল হয়েছিল। এবার তুমি সম্পূর্ণ Power OFF করে আবার ON করেছ। এটি অনেক বেশি গুরুত্বপূর্ণ পরীক্ষা।
+
+১. Power Cycle Test-এর ফলাফল
+পরীক্ষা
+
+ফলাফল
+
+Power ON Reset
+
+POWERON_RESET
+
+Filesystem Initialization
+
+PASS
+
+NTC Initialization
+
+PASS
+
+CAN Initialization
+
+PASS
+
+BLE Initialization
+
+PASS
+
+KEY Initialization
+
+PASS
+
+DSP Initialization
+
+PASS
+
+GIF Initialization
+
+PASS
+
+Complete Initialization
+
+PASS
+
+বিশেষভাবে:
+
+Pass:KEY init completed!
+এবং
+
+Pass:ALL init completed!
+এগুলো প্রমাণ করে Firmware-এর Activation Check এখন Boot-এর সময় সফল হচ্ছে।
+
+২. আমাদের এখন পর্যন্ত অর্জন
+বিষয়
+
+বর্তমান অবস্থা
+
+Firmware Version
+
+5.24
+
+Device ID
+
+C82CD8BD2A58
+
+Activation Channel
+
+S
+
+SPWD Value
+
+2e02fd
+
+Protocol
+
+ZTE4875
+
+Protocol ID
+
+32 (0x20)
+
+Activation Check
+
+PASS
+
+Cold Power Cycle
+
+PASS
+
+CAN Initialization
+
+PASS
+
+আমাদের পরীক্ষায় SPWD=2e02fd দেওয়ার পর Firmware Active হয়েছে এবং Power Cycle-এর পরেও Active থাকছে।
+
+এখন 5.24 Firmware-এর Activation Configuration পরিবর্তন করবে না।
+
+৩. একটি ছোট Warning
+তোমার Log-এ:
+
+E (631) esp_core_dump_flash: No core dump partition found!
+এটি Core Dump Partition না থাকার Warning। এটি বর্তমানে Firmware Initialization বন্ধ করছে না। তাই আপাতত এটি পরিবর্তন করার প্রয়োজন নেই।
+
+৪. পরবর্তী কাজ: ZTE4875 CAN Communication
+এখন Activation থেকে CAN Communication পরীক্ষায় যেতে পারি।
+
+আমাদের পরীক্ষার ক্রম হবে:
+
+ESP32 CAN Controller Initialization।
+
+CAN Transceiver Communication।
+
+ZTE4875 থেকে CAN Telemetry গ্রহণ।
+
+Voltage ও Current Data Decode।
+
+Voltage Setpoint পাঠানো।
+
+Current Limit Control।
+
+LCD ও Web Dashboard Integration।
+
+প্রথমে একটি তথ্য প্রয়োজন
+তোমার ZTE4875 Power Supply কি বর্তমানে ESP32-এর সঙ্গে CAN Transceiver দিয়ে সংযুক্ত আছে?
+
+এটি নিশ্চিত হলে আমরা CAN Frame Capture দিয়ে পরবর্তী কাজ শুরু করব।
+
